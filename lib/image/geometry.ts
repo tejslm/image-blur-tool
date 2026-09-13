@@ -3,6 +3,13 @@ import type { BlurRegion } from "./types";
 export const MIN_STRENGTH = 0;
 export const MAX_STRENGTH = 100;
 export const DEFAULT_STRENGTH = 55;
+/** Corner radius of the "rounded" shape, as a fraction of the shortest side. */
+export const ROUNDED_RATIO = 0.28;
+
+/** Corner radius in pixels for a "rounded" rect of the given box size. */
+export function roundedCornerRadius(width: number, height: number): number {
+  return Math.max(0, Math.min(width, height) * ROUNDED_RATIO);
+}
 
 /** Map UI strength (0..100) to a blur radius in CSS pixels. */
 export function strengthToRadius(strength: number): number {

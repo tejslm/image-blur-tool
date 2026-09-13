@@ -1,5 +1,10 @@
 export type ExportFormat = "png" | "jpeg" | "webp";
 
+/** Shape used to mask a blur region. */
+export type BlurShape = "rect" | "rounded" | "ellipse";
+
+export const SHAPES: BlurShape[] = ["rect", "rounded", "ellipse"];
+
 export interface BlurRegion {
   id: string;
   /** Normalized coordinates relative to the image (0..1). */
@@ -9,6 +14,8 @@ export interface BlurRegion {
   h: number;
   /** Blur strength, 0..100 (UI scale). */
   strength: number;
+  /** Mask shape applied to this region. */
+  shape: BlurShape;
 }
 
 export interface LoadedImage {

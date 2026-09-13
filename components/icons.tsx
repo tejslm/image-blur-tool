@@ -201,3 +201,27 @@ export function InfoIcon(props: IconProps) {
     </svg>
   );
 }
+
+export function RectangleIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <rect x="3.5" y="5.5" width="17" height="13" rx="1" />
+    </svg>
+  );
+}
+
+export function RoundedRectIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <rect x="3.5" y="5.5" width="17" height="13" rx="5" />
+    </svg>
+  );
+}
+
+export function EllipseIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <ellipse cx="12" cy="12" rx="8.5" ry="6" />
+    </svg>
+  );
+}

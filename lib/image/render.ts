@@ -1,5 +1,5 @@
-import type { BlurRegion, LoadedImage } from "./types";
-import { strengthToRadius, clamp } from "./geometry";
+import type { BlurRegion, BlurShape, LoadedImage } from "./types";
+import { strengthToRadius, clamp, roundedCornerRadius } from "./geometry";
 
 export interface BlurContext {
   scratch: HTMLCanvasElement;
@@ -61,6 +61,17 @@ export function downscaleUpscaleBlur(source: HTMLCanvasElement, radius: number):
   sctx.drawImage(small, 0, 0, tw, th, 0, 0, w, h);
 }
 
+function traceShapePath(ctx: CanvasRenderingContext2D, shape: BlurShape, x: number, y: number, w: number, h: number) {
+  ctx.beginPath();
+  if (shape === "ellipse") {
+    ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
+  } else if (shape === "rounded") {
+    ctx.roundRect(x, y, w, h, roundedCornerRadius(w, h));
+  } else {
+    ctx.rect(x, y, w, h);
+  }
+}
+
 export function blurRegion(
   ctx: CanvasRenderingContext2D,
   source: CanvasImageSource,
@@ -71,7 +82,8 @@ export function blurRegion(
   w: number,
   h: number,
   radius: number,
-  bc: BlurContext
+  bc: BlurContext,
+  shape: BlurShape = "rect"
 ): void {
   if (w <= 0 || h <= 0) return;
   const safeRadius = Math.max(0, radius);
@@ -102,7 +114,15 @@ export function blurRegion(
     }
   }
 
-  ctx.drawImage(bc.scratch, x - sx, y - sy, w, h, x, y, w, h);
+  if (shape === "rect") {
+    ctx.drawImage(bc.scratch, x - sx, y - sy, w, h, x, y, w, h);
+  } else {
+    ctx.save();
+    traceShapePath(ctx, shape, x, y, w, h);
+    ctx.clip();
+    ctx.drawImage(bc.scratch, x - sx, y - sy, w, h, x, y, w, h);
+    ctx.restore();
+  }
 }
 
 /**
@@ -118,7 +138,7 @@ export function renderScene(
   displayW: number,
   displayH: number,
   bc: BlurContext,
-  draft?: { x: number; y: number; w: number; h: number; strength: number } | null
+  draft?: { x: number; y: number; w: number; h: number; strength: number; shape?: BlurShape } | null
 ): void {
   ctx.clearRect(0, 0, displayW, displayH);
   ctx.drawImage(sourceLayer, 0, 0, displayW, displayH);
@@ -128,7 +148,7 @@ export function renderScene(
     const ry = region.y * displayH;
     const rw = region.w * displayW;
     const rh = region.h * displayH;
-    blurRegion(ctx, sourceLayer, displayW, displayH, rx, ry, rw, rh, strengthToRadius(region.strength), bc);
+    blurRegion(ctx, sourceLayer, displayW, displayH, rx, ry, rw, rh, strengthToRadius(region.strength), bc, region.shape);
   }
 
   if (draft) {
@@ -137,7 +157,7 @@ export function renderScene(
     const dw = Math.abs(draft.w);
     const dh = Math.abs(draft.h);
     if (dw > 0.5 && dh > 0.5) {
-      blurRegion(ctx, sourceLayer, displayW, displayH, dx, dy, dw, dh, strengthToRadius(draft.strength), bc);
+      blurRegion(ctx, sourceLayer, displayW, displayH, dx, dy, dw, dh, strengthToRadius(draft.strength), bc, draft.shape ?? "rect");
     }
   }
 }

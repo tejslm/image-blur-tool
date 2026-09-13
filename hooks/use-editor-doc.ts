@@ -1,13 +1,15 @@
 "use client";
 
 import { useCallback, useReducer, useState } from "react";
-import type { BlurRegion, RegionId } from "@/lib/image/types";
+import type { BlurRegion, BlurShape, RegionId } from "@/lib/image/types";
 import { DEFAULT_STRENGTH } from "@/lib/image/geometry";
 
 export interface EditorDoc {
   regions: BlurRegion[];
   /** Strength (0..100) used for the next region a user draws. */
   defaultStrength: number;
+  /** Shape used for the next region a user draws. */
+  defaultShape: BlurShape;
 }
 
 interface HistoryState {
@@ -25,10 +27,14 @@ type DocAction =
   | { type: "start-gesture" };
 
 const MAX_UNDO = 60;
-const emptyDoc: EditorDoc = { regions: [], defaultStrength: DEFAULT_STRENGTH };
+const emptyDoc: EditorDoc = { regions: [], defaultStrength: DEFAULT_STRENGTH, defaultShape: "rect" };
 
 function cloneDoc(doc: EditorDoc): EditorDoc {
-  return { regions: doc.regions.map((r) => ({ ...r })), defaultStrength: doc.defaultStrength };
+  return {
+    regions: doc.regions.map((r) => ({ ...r })),
+    defaultStrength: doc.defaultStrength,
+    defaultShape: doc.defaultShape,
+  };
 }
 
 function historyReducer(state: HistoryState, action: DocAction): HistoryState {
@@ -87,6 +93,7 @@ interface UseEditorDocResult {
   removeRegion: (id: RegionId) => void;
   addRegion: (region: BlurRegion) => void;
   setDefaultStrength: (s: number) => void;
+  setDefaultShape: (s: BlurShape) => void;
 }
 
 export function useEditorDoc(): UseEditorDocResult {
@@ -138,6 +145,13 @@ export function useEditorDoc(): UseEditorDocResult {
     });
   }, []);
 
+  const setDefaultShape = useCallback((s: BlurShape) => {
+    dispatch({
+      type: "mutate",
+      updater: (prev) => ({ ...prev, defaultShape: s }),
+    });
+  }, []);
+
   const undo = useCallback(() => dispatch({ type: "undo" }), []);
   const redo = useCallback(() => dispatch({ type: "redo" }), []);
   const startGesture = useCallback(() => dispatch({ type: "start-gesture" }), []);
@@ -157,5 +171,6 @@ export function useEditorDoc(): UseEditorDocResult {
     removeRegion,
     addRegion,
     setDefaultStrength,
+    setDefaultShape,
   };
 }

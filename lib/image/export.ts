@@ -69,7 +69,7 @@ export async function exportBlurredImage(
     const h = region.h * bh;
     if (w < 1 || h < 1) continue;
     const radius = strengthToRadius(region.strength) * scale;
-    blurRegion(ctx, source.bitmap, bw, bh, region.x * bw, region.y * bh, w, h, radius, bc);
+    blurRegion(ctx, source.bitmap, bw, bh, region.x * bw, region.y * bh, w, h, radius, bc, region.shape);
   }
 
   return toBlob(canvas, MIME[format], QUALITY[format]);

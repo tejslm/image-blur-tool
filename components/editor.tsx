@@ -2,7 +2,7 @@
 
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { BlurRegion, ExportFormat, LoadedImage } from "@/lib/image/types";
+import type { BlurRegion, BlurShape, ExportFormat, LoadedImage } from "@/lib/image/types";
 import { createRegionId } from "@/lib/image/types";
 import { useEditorDoc } from "@/hooks/use-editor-doc";
 import {
@@ -22,12 +22,16 @@ import {
   displayToNormalized,
   normalizedToDisplay,
   regionFromPoints,
+  roundedCornerRadius,
   type DisplayRect,
 } from "@/lib/image/geometry";
 import {
   CheckIcon,
   DownloadIcon,
+  EllipseIcon,
   LockIcon,
+  RectangleIcon,
+  RoundedRectIcon,
   RedoIcon,
   TrashIcon,
   UndoIcon,
@@ -69,6 +73,7 @@ export function Editor({ source, onReset }: EditorProps) {
     removeRegion,
     addRegion,
     setDefaultStrength,
+    setDefaultShape,
   } = useEditorDoc();
 
   const stageRef = useRef<HTMLDivElement>(null);
@@ -132,6 +137,7 @@ export function Editor({ source, onReset }: EditorProps) {
             w: Math.abs(draft.x1 - draft.x0),
             h: Math.abs(draft.y1 - draft.y0),
             strength: docRef.current.defaultStrength,
+            shape: docRef.current.defaultShape,
           }
         : null
     );
@@ -145,7 +151,7 @@ export function Editor({ source, onReset }: EditorProps) {
 
   useEffect(() => {
     scheduleRender();
-  }, [doc.regions, doc.defaultStrength, scheduleRender]);
+  }, [doc.regions, doc.defaultStrength, doc.defaultShape, scheduleRender]);
 
   // Size the canvas to fit the stage, device pixel ratio, and image.
   useEffect(() => {
@@ -326,6 +332,7 @@ export function Editor({ source, onReset }: EditorProps) {
             w: rect.w,
             h: rect.h,
             strength: docRef.current.defaultStrength,
+            shape: docRef.current.defaultShape,
           });
           announce("Blurred area added.");
         }
@@ -444,9 +451,27 @@ export function Editor({ source, onReset }: EditorProps) {
 
   const selectedRegion = selectedId ? doc.regions.find((r) => r.id === selectedId) ?? null : null;
   const strengthValue = selectedRegion ? Math.round(selectedRegion.strength) : Math.round(doc.defaultStrength);
+  const shapeValue: BlurShape = selectedRegion ? selectedRegion.shape ?? "rect" : doc.defaultShape;
+
+  const onShapeChange = useCallback(
+    (value: BlurShape) => {
+      setDefaultShape(value);
+      const selected = selectedRef.current;
+      const regions = docRef.current.regions;
+      if (selected) {
+        updateRegion(selected, { shape: value });
+      } else if (regions.length > 0) {
+        const last = regions[regions.length - 1];
+        setSelectedId(last.id);
+        updateRegion(last.id, { shape: value });
+      }
+    },
+    [updateRegion, setDefaultShape, setSelectedId]
+  );
 
   const onStrengthChange = useCallback(
     (value: number) => {
+      setDefaultStrength(value);
       const selected = selectedRef.current;
       const regions = docRef.current.regions;
       if (selected) {
@@ -455,8 +480,6 @@ export function Editor({ source, onReset }: EditorProps) {
         const last = regions[regions.length - 1];
         setSelectedId(last.id);
         updateRegion(last.id, { strength: value });
-      } else {
-        setDefaultStrength(value);
       }
     },
     [updateRegion, setDefaultStrength, setSelectedId]
@@ -568,6 +591,12 @@ export function Editor({ source, onReset }: EditorProps) {
                     top: Math.min(draftUI.y0, draftUI.y1),
                     width: Math.abs(draftUI.x1 - draftUI.x0),
                     height: Math.abs(draftUI.y1 - draftUI.y0),
+                    borderRadius:
+                      doc.defaultShape === "ellipse"
+                        ? "50%"
+                        : doc.defaultShape === "rounded"
+                          ? `${roundedCornerRadius(Math.abs(draftUI.x1 - draftUI.x0), Math.abs(draftUI.y1 - draftUI.y0))}px`
+                          : undefined,
                   }}
                 />
               )}
@@ -579,10 +608,22 @@ export function Editor({ source, onReset }: EditorProps) {
                     key={region.id}
                     className={`region ${isSelected ? "is-selected" : ""}`}
                     data-id={region.id}
+                    data-shape={region.shape}
                     tabIndex={0}
                     role="img"
                     aria-label={`Blurred area ${i + 1} of ${doc.regions.length}`}
-                    style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }}
+                    style={{
+                      left: rect.x,
+                      top: rect.y,
+                      width: rect.w,
+                      height: rect.h,
+                      borderRadius:
+                        region.shape === "ellipse"
+                          ? "50%"
+                          : region.shape === "rounded"
+                            ? `${roundedCornerRadius(rect.w, rect.h)}px`
+                            : undefined,
+                    }}
                     onFocus={(e) => {
                       e.stopPropagation();
                       select(region.id);
@@ -613,6 +654,44 @@ export function Editor({ source, onReset }: EditorProps) {
 
         <div className="editor__controls">
           <div className="editor__controls-row">
+            <div className="shape-picker" role="group" aria-label="Blur area shape">
+              <span className="shape-picker__label" id="shape-label">
+                Shape
+              </span>
+              <div className="shape-picker__btns">
+                <button
+                  type="button"
+                  className="shape-picker__btn"
+                  aria-pressed={shapeValue === "rect"}
+                  aria-label="Rectangle shape"
+                  title="Rectangle"
+                  onClick={() => onShapeChange("rect")}
+                >
+                  <RectangleIcon width={16} height={16} />
+                </button>
+                <button
+                  type="button"
+                  className="shape-picker__btn"
+                  aria-pressed={shapeValue === "rounded"}
+                  aria-label="Rounded rectangle shape"
+                  title="Rounded rectangle"
+                  onClick={() => onShapeChange("rounded")}
+                >
+                  <RoundedRectIcon width={16} height={16} />
+                </button>
+                <button
+                  type="button"
+                  className="shape-picker__btn"
+                  aria-pressed={shapeValue === "ellipse"}
+                  aria-label="Ellipse shape"
+                  title="Ellipse (great for faces)"
+                  onClick={() => onShapeChange("ellipse")}
+                >
+                  <EllipseIcon width={16} height={16} />
+                </button>
+              </div>
+            </div>
+
             <div className="strength">
               <span className="strength__label" id="strength-label">
                 <span>Blur strength</span>
