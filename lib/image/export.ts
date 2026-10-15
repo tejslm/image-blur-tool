@@ -1,6 +1,5 @@
 import type { BlurRegion, ExportFormat, LoadedImage } from "./types";
-import { strengthToRadius } from "./geometry";
-import { blurRegion, createBlurContext } from "./render";
+import { createRenderContext, paintRegion } from "./render";
 
 const MIME: Record<ExportFormat, string> = {
   png: "image/png",
@@ -38,7 +37,7 @@ function toBlob(canvas: HTMLCanvasElement, mime: string, quality: number): Promi
 }
 
 /**
- * Renders the blurred image at full source resolution. Everything happens
+ * Renders the obscured image at full source resolution. Everything happens
  * locally in the browser; the returned blob is never transmitted.
  */
 export async function exportBlurredImage(
@@ -62,14 +61,28 @@ export async function exportBlurredImage(
   ctx.drawImage(source.bitmap, 0, 0, bw, bh);
 
   const scale = displayWidth > 0 ? bw / displayWidth : 1;
-  const bc = createBlurContext();
+  const rc = createRenderContext();
 
   for (const region of regions) {
     const w = region.w * bw;
     const h = region.h * bh;
     if (w < 1 || h < 1) continue;
-    const radius = strengthToRadius(region.strength) * scale;
-    blurRegion(ctx, source.bitmap, bw, bh, region.x * bw, region.y * bh, w, h, radius, bc, region.shape);
+    paintRegion(
+      ctx,
+      source.bitmap,
+      bw,
+      bh,
+      {
+        x: region.x * bw,
+        y: region.y * bh,
+        w,
+        h,
+        strength: region.strength,
+        shape: region.shape,
+      },
+      scale,
+      rc
+    );
   }
 
   return toBlob(canvas, MIME[format], QUALITY[format]);
@@ -86,7 +99,7 @@ export function suggestedFilename(sourceName: string | null, format: ExportForma
     : "";
   const stem = base || destNameFallback;
   const ext = format === "jpeg" ? "jpg" : format;
-  return `${stem}-blurred.${ext}`;
+  return `${stem}-pixelated.${ext}`;
 }
 
 export function triggerDownload(blob: Blob, filename: string): void {

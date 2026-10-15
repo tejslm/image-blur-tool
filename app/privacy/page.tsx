@@ -20,7 +20,7 @@ export default function PrivacyPage() {
       <div className="prose" style={{ marginBottom: 40 }}>
         <h2>What we process</h2>
         <p>
-          When you use the blur tool on {SITE.name}, the image you open is processed locally in your browser. Blurring and
+          When you use the tool on {SITE.name}, the image you open is processed locally in your browser. Pixelating and
           export happen with browser-native capabilities directly on your device.
         </p>
 

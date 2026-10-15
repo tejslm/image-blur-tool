@@ -15,6 +15,11 @@ export const FAQ_ITEMS: FAQItem[] = [
       "Yes. Draw a box over each area you want to hide — faces, text, license plates and anything else — and each one can be moved, resized, or deleted afterwards.",
   },
   {
+    question: "Why does BlurIt pixelate instead of blurring?",
+    answer:
+      "Blurring softens an area but keeps some of its structure, and a blur can sometimes be reversed or estimated. Pixelating replaces the area with averaged colour blocks and leaves nothing readable underneath, so it is the safer way to hide faces, text, and license plates.",
+  },
+  {
     question: "Does BlurIt upload my image?",
     answer:
       "No. Your image is processed entirely in your browser on your device. It is never sent to our servers, and nothing is stored anywhere.",

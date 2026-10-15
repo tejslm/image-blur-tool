@@ -30,26 +30,31 @@ export default function HowItWorksPage() {
 
         <h2>2. Draw over what you want to hide</h2>
         <p>
-          Once your image is open, drag a box over any area you want to blur — a face, a name, an address, a license plate,
+          Once your image is open, drag a box over any area you want to hide — a face, a name, an address, a license plate,
           or anything else. You can add as many boxes as you like.
+        </p>
+        <p>
+          Every box is <strong>pixelated</strong> into a mosaic. The area is replaced with averaged colour blocks, so it
+          can&rsquo;t be reversed to reveal what was underneath — the safest choice for faces, text, and license plates.
         </p>
         <p>Each box is independent, so you can:</p>
         <ul>
           <li>Move a box by dragging inside it</li>
           <li>Resize it using the corner and edge handles</li>
           <li>Remove it with the Delete key or the &ldquo;Delete area&rdquo; button</li>
-          <li>Adjust its blur strength with the slider</li>
+          <li>Choose its shape — rectangle, rounded, or ellipse</li>
+          <li>Set the pixel block size with the slider</li>
         </ul>
 
         <h2>3. Download the result</h2>
         <p>
-          Choose PNG, JPG, or WebP and click <em>Download image</em>. The blur is applied at the full resolution of your
-          original image and saved into the file — the exported image is truly blurred, not just a preview overlay.
+          Choose PNG, JPG, or WebP and click <em>Download image</em>. The pixelation is applied at the full resolution of
+          your original image and saved into the file — the exported image is truly obscured, not just a preview overlay.
         </p>
 
         <h2>Where does the processing happen?</h2>
         <p>
-          Entirely in your browser. The image is decoded, blurred, and exported with standard in-browser capabilities
+          Entirely in your browser. The image is decoded, pixelated, and exported with standard in-browser capabilities
           (the Canvas and ImageBitmap APIs). Nothing is uploaded, logged, or stored by us.
         </p>
         <p>

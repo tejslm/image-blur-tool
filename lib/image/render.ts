@@ -1,24 +1,10 @@
 import type { BlurRegion, BlurShape, LoadedImage } from "./types";
-import { strengthToRadius, clamp, roundedCornerRadius } from "./geometry";
+import { roundedCornerRadius, strengthToBlockSize } from "./geometry";
 
-export interface BlurContext {
-  scratch: HTMLCanvasElement;
-  small: HTMLCanvasElement;
-  supportsFilter: boolean;
+export interface RenderContext {
+  /** Reusable downscale target for the mosaic. */
+  canvas: HTMLCanvasElement;
 }
-
-const testCanvas =
-  typeof OffscreenCanvas !== "undefined"
-    ? new OffscreenCanvas(2, 2)
-    : typeof document !== "undefined"
-      ? document.createElement("canvas")
-      : null;
-
-const SUPPORTS_FILTER = (() => {
-  if (!testCanvas) return false;
-  const ctx = testCanvas.getContext("2d") as CanvasRenderingContext2D | null;
-  return typeof ctx?.filter === "string";
-})();
 
 function makeCanvas(w: number, h: number): HTMLCanvasElement {
   const c = document.createElement("canvas");
@@ -34,31 +20,8 @@ function ensureSize(c: HTMLCanvasElement, w: number, h: number) {
   }
 }
 
-export function createBlurContext(): BlurContext {
-  return {
-    scratch: makeCanvas(1, 1),
-    small: makeCanvas(1, 1),
-    supportsFilter: SUPPORTS_FILTER,
-  };
-}
-
-export function downscaleUpscaleBlur(source: HTMLCanvasElement, radius: number): void {
-  const w = source.width;
-  const h = source.height;
-  if (radius <= 1 || w <= 0 || h <= 0) return;
-  const factor = clamp(radius * 2.2, 2, Math.min(w, h));
-  const tw = Math.max(1, Math.round(w / factor));
-  const th = Math.max(1, Math.round(h / factor));
-  const sctx = source.getContext("2d")!;
-  sctx.imageSmoothingEnabled = true;
-  sctx.imageSmoothingQuality = "high";
-  // Downsample onto a temporary small canvas
-  const small = makeCanvas(tw, th);
-  const mctx = small.getContext("2d")!;
-  mctx.drawImage(source, 0, 0, w, h, 0, 0, tw, th);
-  // Upsample back
-  sctx.clearRect(0, 0, w, h);
-  sctx.drawImage(small, 0, 0, tw, th, 0, 0, w, h);
+export function createRenderContext(): RenderContext {
+  return { canvas: makeCanvas(1, 1) };
 }
 
 function traceShapePath(ctx: CanvasRenderingContext2D, shape: BlurShape, x: number, y: number, w: number, h: number) {
@@ -72,7 +35,34 @@ function traceShapePath(ctx: CanvasRenderingContext2D, shape: BlurShape, x: numb
   }
 }
 
-export function blurRegion(
+/** Run `draw` clipped to a region's shape. */
+function withShapeClip(
+  ctx: CanvasRenderingContext2D,
+  shape: BlurShape,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  draw: () => void
+) {
+  if (shape === "rect") {
+    draw();
+    return;
+  }
+  ctx.save();
+  traceShapePath(ctx, shape, x, y, w, h);
+  ctx.clip();
+  draw();
+  ctx.restore();
+}
+
+/**
+ * Pixelate (mosaic) the given rectangle of `source` and composite it back,
+ * masked to `shape`. The area is averaged down into colour blocks and redrawn
+ * without smoothing, so the underlying detail is destroyed rather than merely
+ * softened. `block` is the approximate block size in output pixels.
+ */
+export function pixelateRegion(
   ctx: CanvasRenderingContext2D,
   source: CanvasImageSource,
   sourceW: number,
@@ -81,83 +71,116 @@ export function blurRegion(
   y: number,
   w: number,
   h: number,
-  radius: number,
-  bc: BlurContext,
+  block: number,
+  rc: RenderContext,
   shape: BlurShape = "rect"
 ): void {
-  if (w <= 0 || h <= 0) return;
-  const safeRadius = Math.max(0, radius);
-  const cappedRadius = Math.min(safeRadius, Math.max(0, Math.min(w, h) * 0.5));
-  const sw = sourceW;
-  const sh = sourceH;
-  if (sw <= 0 || sh <= 0) return;
+  if (w <= 0 || h <= 0 || sourceW <= 0 || sourceH <= 0) return;
+  const b = Math.max(1, block);
+  const cols = Math.max(1, Math.ceil(w / b));
+  const rows = Math.max(1, Math.ceil(h / b));
 
-  const pad = cappedRadius > 0.5 ? Math.ceil(cappedRadius * 1.35) + 2 : 0;
-  const sx = clamp(Math.floor(x - pad), 0, sw);
-  const sy = clamp(Math.floor(y - pad), 0, sh);
-  const swPatch = clamp(Math.ceil(x + w + pad), sx, sw) - sx;
-  const shPatch = clamp(Math.ceil(y + h + pad), sy, sh) - sy;
+  // Average each block's colour by scaling the patch down…
+  ensureSize(rc.canvas, cols, rows);
+  const mctx = rc.canvas.getContext("2d")!;
+  mctx.imageSmoothingEnabled = true;
+  mctx.imageSmoothingQuality = "high";
+  mctx.clearRect(0, 0, cols, rows);
+  mctx.drawImage(source, x, y, w, h, 0, 0, cols, rows);
 
-  if (swPatch <= 0 || shPatch <= 0) return;
+  // …then redraw it blocky, with smoothing off.
+  const prevSmoothing = ctx.imageSmoothingEnabled;
+  ctx.imageSmoothingEnabled = false;
+  withShapeClip(ctx, shape, x, y, w, h, () => {
+    ctx.drawImage(rc.canvas, 0, 0, cols, rows, x, y, w, h);
+  });
+  ctx.imageSmoothingEnabled = prevSmoothing;
+}
 
-  ensureSize(bc.scratch, swPatch, shPatch);
-  const sctx = bc.scratch.getContext("2d")!;
-  sctx.drawImage(source, sx, sy, swPatch, shPatch, 0, 0, swPatch, shPatch);
-
-  if (cappedRadius > 0.5) {
-    if (bc.supportsFilter) {
-      sctx.filter = `blur(${cappedRadius}px)`;
-      sctx.drawImage(bc.scratch, 0, 0);
-      sctx.filter = "none";
-    } else {
-      downscaleUpscaleBlur(bc.scratch, cappedRadius);
-    }
-  }
-
-  if (shape === "rect") {
-    ctx.drawImage(bc.scratch, x - sx, y - sy, w, h, x, y, w, h);
-  } else {
-    ctx.save();
-    traceShapePath(ctx, shape, x, y, w, h);
-    ctx.clip();
-    ctx.drawImage(bc.scratch, x - sx, y - sy, w, h, x, y, w, h);
-    ctx.restore();
-  }
+export interface RegionPaint {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  strength: number;
+  shape?: BlurShape;
 }
 
 /**
- * Draw the full blurred preview scene.
+ * Paint one region onto `ctx`. Geometry is in output pixels; `scale` is
+ * output pixels per display pixel, which keeps the block size proportional
+ * when exporting at full resolution.
+ */
+export function paintRegion(
+  ctx: CanvasRenderingContext2D,
+  source: CanvasImageSource,
+  sourceW: number,
+  sourceH: number,
+  region: RegionPaint,
+  scale: number,
+  rc: RenderContext
+): void {
+  const { x, y, w, h } = region;
+  if (w <= 0 || h <= 0) return;
+  const block = strengthToBlockSize(region.strength) * (scale > 0 ? scale : 1);
+  pixelateRegion(ctx, source, sourceW, sourceH, x, y, w, h, block, rc, region.shape ?? "rect");
+}
+
+/**
+ * Draw the full preview scene.
  * All rect parameters are in CSS pixels matching the canvas.
  */
 export function renderScene(
   ctx: CanvasRenderingContext2D,
   sourceLayer: HTMLCanvasElement,
-  sourceW: number,
-  sourceH: number,
   regions: BlurRegion[],
   displayW: number,
   displayH: number,
-  bc: BlurContext,
+  rc: RenderContext,
   draft?: { x: number; y: number; w: number; h: number; strength: number; shape?: BlurShape } | null
 ): void {
   ctx.clearRect(0, 0, displayW, displayH);
   ctx.drawImage(sourceLayer, 0, 0, displayW, displayH);
 
   for (const region of regions) {
-    const rx = region.x * displayW;
-    const ry = region.y * displayH;
-    const rw = region.w * displayW;
-    const rh = region.h * displayH;
-    blurRegion(ctx, sourceLayer, displayW, displayH, rx, ry, rw, rh, strengthToRadius(region.strength), bc, region.shape);
+    paintRegion(
+      ctx,
+      sourceLayer,
+      displayW,
+      displayH,
+      {
+        x: region.x * displayW,
+        y: region.y * displayH,
+        w: region.w * displayW,
+        h: region.h * displayH,
+        strength: region.strength,
+        shape: region.shape,
+      },
+      1,
+      rc
+    );
   }
 
   if (draft) {
-    const dx = draft.x;
-    const dy = draft.y;
     const dw = Math.abs(draft.w);
     const dh = Math.abs(draft.h);
     if (dw > 0.5 && dh > 0.5) {
-      blurRegion(ctx, sourceLayer, displayW, displayH, dx, dy, dw, dh, strengthToRadius(draft.strength), bc, draft.shape ?? "rect");
+      paintRegion(
+        ctx,
+        sourceLayer,
+        displayW,
+        displayH,
+        {
+          x: draft.x,
+          y: draft.y,
+          w: dw,
+          h: dh,
+          strength: draft.strength,
+          shape: draft.shape ?? "rect",
+        },
+        1,
+        rc
+      );
     }
   }
 }

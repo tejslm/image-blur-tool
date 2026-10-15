@@ -38,7 +38,8 @@ export function ImageUploader({ onFileSelected, error, onError, dismissError }: 
         className={`dropzone ${isDragging ? "is-dragging" : ""} ${error ? "has-error" : ""}`}
         role="button"
         tabIndex={0}
-        aria-label="Choose an image to blur"
+        data-dropzone="true"
+        aria-label="Choose an image to pixelate"
         aria-describedby="upload-formats upload-privacy"
         onClick={openPicker}
         onKeyDown={(e) => {

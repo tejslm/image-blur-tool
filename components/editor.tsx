@@ -8,7 +8,7 @@ import { useEditorDoc } from "@/hooks/use-editor-doc";
 import {
   createImageLayer,
   renderScene,
-  createBlurContext,
+  createRenderContext,
 } from "@/lib/image/render";
 import {
   FORMAT_LABELS,
@@ -102,7 +102,7 @@ export function Editor({ source, onReset }: EditorProps) {
   const [format, setFormat] = useState<ExportFormat>("png");
   const [exporting, setExporting] = useState(false);
   const [downloadFeedback, setDownloadFeedback] = useState<"idle" | "done">("idle");
-  const [bc] = useState(createBlurContext);
+  const [rc] = useState(createRenderContext);
 
   const announce = useCallback((message: string) => {
     setStatus(message);
@@ -112,7 +112,7 @@ export function Editor({ source, onReset }: EditorProps) {
     rafRef.current = null;
     const canvas = canvasRef.current;
     const layer = layerRef.current;
-    if (!canvas || !layer || !bc) return;
+    if (!canvas || !layer || !rc) return;
     const { w, h } = displayRef.current;
     if (w <= 0 || h <= 0) return;
     const ctx = canvas.getContext("2d");
@@ -124,12 +124,10 @@ export function Editor({ source, onReset }: EditorProps) {
     renderScene(
       ctx,
       layer,
-      w,
-      h,
       docRef.current.regions,
       w,
       h,
-      bc,
+      rc,
       draft && (Math.abs(draft.x1 - draft.x0) > 0.6 || Math.abs(draft.y1 - draft.y0) > 0.6)
         ? {
             x: Math.min(draft.x0, draft.x1),
@@ -141,7 +139,7 @@ export function Editor({ source, onReset }: EditorProps) {
           }
         : null
     );
-  }, [bc]);
+  }, [rc]);
 
   const scheduleRender = useCallback(() => {
     if (rafRef.current == null) {
@@ -334,7 +332,7 @@ export function Editor({ source, onReset }: EditorProps) {
             strength: docRef.current.defaultStrength,
             shape: docRef.current.defaultShape,
           });
-          announce("Blurred area added.");
+          announce("Pixelated area added.");
         }
       } else {
         announce("No area was drawn.");
@@ -390,7 +388,7 @@ export function Editor({ source, onReset }: EditorProps) {
           e.preventDefault();
           startGesture();
           removeRegion(sel);
-          announce("Blurred area deleted.");
+          announce("Pixelated area deleted.");
         }
         return;
       }
@@ -426,7 +424,7 @@ export function Editor({ source, onReset }: EditorProps) {
       onReset();
       return;
     }
-    const ok = window.confirm("Start over? You'll lose any blur edits on this image.");
+    const ok = window.confirm("Start over? You'll lose any pixelation edits on this image.");
     if (ok) onReset();
   }, [onReset]);
 
@@ -488,7 +486,7 @@ export function Editor({ source, onReset }: EditorProps) {
   const tip = useMemo(() => {
     if (doc.regions.length === 0 && !draftUI) return "Draw over anything you want to hide.";
     if (selectedRegion) return "Drag inside to move · use the handles to resize · press Delete to remove.";
-    return "Draw another box to blur more areas. Drag a box to move it.";
+    return "Draw another box to pixelate more areas. Drag a box to move it.";
   }, [doc.regions.length, draftUI, selectedRegion]);
 
   return (
@@ -518,7 +516,7 @@ export function Editor({ source, onReset }: EditorProps) {
           {selectedRegion && (
             <>
               <span className="editor__divider" aria-hidden />
-              <button type="button" className="btn btn--ghost btn--sm" onClick={deleteSelected} aria-label={`Delete blurred area ${doc.regions.indexOf(selectedRegion) + 1}`}>
+              <button type="button" className="btn btn--ghost btn--sm" onClick={deleteSelected} aria-label={`Delete area ${doc.regions.indexOf(selectedRegion) + 1}`}>
                 <TrashIcon width={16} height={16} />
                 Delete area
               </button>
@@ -546,7 +544,7 @@ export function Editor({ source, onReset }: EditorProps) {
                 {!webpSupported ? " (unsupported)" : ""}
               </option>
             </select>
-            <button type="button" className="btn btn--primary" onClick={onDownload} disabled={exporting} aria-label="Download the blurred image">
+            <button type="button" className="btn btn--primary" onClick={onDownload} disabled={exporting} aria-label="Download the pixelated image">
               {exporting ? (
                 <>
                   <span className="spinner" aria-hidden style={{ width: 16, height: 16 }} />
@@ -611,7 +609,7 @@ export function Editor({ source, onReset }: EditorProps) {
                     data-shape={region.shape}
                     tabIndex={0}
                     role="img"
-                    aria-label={`Blurred area ${i + 1} of ${doc.regions.length}`}
+                    aria-label={`Pixelated area ${i + 1} of ${doc.regions.length}`}
                     style={{
                       left: rect.x,
                       top: rect.y,
@@ -654,7 +652,7 @@ export function Editor({ source, onReset }: EditorProps) {
 
         <div className="editor__controls">
           <div className="editor__controls-row">
-            <div className="shape-picker" role="group" aria-label="Blur area shape">
+            <div className="shape-picker" role="group" aria-label="Pixelation shape">
               <span className="shape-picker__label" id="shape-label">
                 Shape
               </span>
@@ -694,7 +692,7 @@ export function Editor({ source, onReset }: EditorProps) {
 
             <div className="strength">
               <span className="strength__label" id="strength-label">
-                <span>Blur strength</span>
+                <span>Pixel size</span>
                 <span className="strength__value">{strengthValue}</span>
               </span>
               <input
@@ -705,7 +703,7 @@ export function Editor({ source, onReset }: EditorProps) {
                 step={1}
                 value={strengthValue}
                 aria-labelledby="strength-label"
-                aria-valuetext={`Blur strength ${strengthValue} out of 100`}
+                aria-valuetext={`Pixel size ${strengthValue} out of 100`}
                 style={{ "--range-progress": `${strengthValue}%` } as CSSProperties}
                 onPointerDown={startGesture}
                 onKeyDown={startGesture}
@@ -713,8 +711,8 @@ export function Editor({ source, onReset }: EditorProps) {
                 onPointerUp={startGesture}
               />
               <div className="strength__track-labels">
-                <span>Soft</span>
-                <span>Strong</span>
+                <span>Small</span>
+                <span>Large</span>
               </div>
             </div>
 

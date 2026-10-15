@@ -1,6 +1,6 @@
 export type ExportFormat = "png" | "jpeg" | "webp";
 
-/** Shape used to mask a blur region. */
+/** Shape used to mask a blurred (pixelated) region. */
 export type BlurShape = "rect" | "rounded" | "ellipse";
 
 export const SHAPES: BlurShape[] = ["rect", "rounded", "ellipse"];
@@ -12,7 +12,7 @@ export interface BlurRegion {
   y: number;
   w: number;
   h: number;
-  /** Blur strength, 0..100 (UI scale). */
+  /** Pixel size, 0..100 (UI scale). Larger means chunkier blocks. */
   strength: number;
   /** Mask shape applied to this region. */
   shape: BlurShape;

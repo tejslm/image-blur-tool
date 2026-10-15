@@ -57,11 +57,11 @@ export default function Home() {
           </div>
           <div className="step">
             <h3>Draw over what you want to hide</h3>
-            <p>Draw a box over any face, name, address, or detail. Move it around, resize it, and blur as many areas as you like.</p>
+            <p>Draw a box over any face, name, address, or detail. Move it around, resize it, and pixelate as many areas as you like.</p>
           </div>
           <div className="step">
             <h3>Download the result</h3>
-            <p>Choose PNG, JPG, or WebP and download. The blur is baked into the saved image — not just a preview.</p>
+            <p>Choose PNG, JPG, or WebP and download. The pixelation is baked into the saved image — not just a preview.</p>
           </div>
         </div>
       </section>

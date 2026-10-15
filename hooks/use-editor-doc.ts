@@ -6,7 +6,7 @@ import { DEFAULT_STRENGTH } from "@/lib/image/geometry";
 
 export interface EditorDoc {
   regions: BlurRegion[];
-  /** Strength (0..100) used for the next region a user draws. */
+  /** Pixel size (0..100) used for the next region a user draws. */
   defaultStrength: number;
   /** Shape used for the next region a user draws. */
   defaultShape: BlurShape;
@@ -27,7 +27,11 @@ type DocAction =
   | { type: "start-gesture" };
 
 const MAX_UNDO = 60;
-const emptyDoc: EditorDoc = { regions: [], defaultStrength: DEFAULT_STRENGTH, defaultShape: "rect" };
+const emptyDoc: EditorDoc = {
+  regions: [],
+  defaultStrength: DEFAULT_STRENGTH,
+  defaultShape: "rect",
+};
 
 function cloneDoc(doc: EditorDoc): EditorDoc {
   return {

@@ -11,10 +11,10 @@ export function roundedCornerRadius(width: number, height: number): number {
   return Math.max(0, Math.min(width, height) * ROUNDED_RATIO);
 }
 
-/** Map UI strength (0..100) to a blur radius in CSS pixels. */
-export function strengthToRadius(strength: number): number {
+/** Map UI strength (0..100) to a pixel block size (CSS pixels), 2..32. */
+export function strengthToBlockSize(strength: number): number {
   const t = Math.min(Math.max(strength, 0), 100) / 100;
-  return Math.round(2 + Math.pow(t, 1.5) * 68);
+  return Math.round(2 + Math.pow(t, 1.4) * 30);
 }
 
 export function clamp(value: number, min: number, max: number): number {

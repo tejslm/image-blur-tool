@@ -134,6 +134,10 @@ export function Tool() {
       e.preventDefault();
       dragDepth.current = 0;
       setDraggingFile(false);
+      // The uploader handles drops on its own dropzone (it also validates the
+      // file), so only reset the window drag state for those.
+      const target = e.target as HTMLElement | null;
+      if (target && typeof target.closest === "function" && target.closest("[data-dropzone]")) return;
       const files = e.dataTransfer?.files;
       if (!files) return;
       const imgFile = Array.from(files).find((f) => f.type.startsWith("image/"));
@@ -184,7 +188,7 @@ export function Tool() {
       {state.confirmReplaceOpen && (
         <ConfirmDialog
           title="Replace this image?"
-          description="Opening a new image will discard your current blur edits."
+          description="Opening a new image will discard your current pixelation edits."
           confirmLabel="Replace image"
           cancelLabel="Keep current image"
           onConfirm={applyPendingFile}

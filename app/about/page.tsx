@@ -31,7 +31,7 @@ export default function AboutPage() {
 
         <h2>How it&rsquo;s built</h2>
         <p>
-          The site is a static Next.js application. Images are decoded with the browser&rsquo;s ImageBitmap API, blurred
+          The site is a static Next.js application. Images are decoded with the browser&rsquo;s ImageBitmap API, pixelated
           with the Canvas API, and exported as PNG, JPG, or WebP — all locally. There is no backend and no database.
         </p>
 
@@ -43,11 +43,11 @@ export default function AboutPage() {
           <li>We don&rsquo;t require an account.</li>
         </ul>
 
-        <h2>An honest note on blurring</h2>
+        <h2>An honest note on pixelating</h2>
         <p>
-          Blurring makes a selected area unreadable, but it is not a guarantee against every conceivable reconstruction
-          technique. For truly sensitive material, consider fully deleting the area from the exported image as well. We
-          simply give you a private tool that does what it says.
+          Pixelating replaces a selected area with averaged colour blocks, so nothing readable is left behind and there is
+          no &ldquo;undo&rdquo; in the exported file. That said, always review the saved image yourself before sharing it if
+          privacy matters. We simply give you a private tool that does what it says.
         </p>
 
         <p>

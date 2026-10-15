@@ -56,7 +56,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${inter.variable} ${newsreader.variable}`}
     >
-      <body>
+      <body suppressHydrationWarning>
         <a className="skip-link" href="#main-content">
           Skip to content
         </a>

@@ -38,7 +38,7 @@ export default function TermsPage() {
         <h2>No warranty</h2>
         <p>
           The tool is provided &ldquo;as is&rdquo; and &ldquo;as available&rdquo; without warranties of any kind, express
-          or implied. We do not guarantee that the tool will be uninterrupted, error-free, or that blurring will make an
+          or implied. We do not guarantee that the tool will be uninterrupted, error-free, or that pixelating will make an
           image fully unrecognizable in every case. You should review the exported image yourself before sharing it if
           privacy matters.
         </p>
