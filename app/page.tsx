@@ -25,10 +25,7 @@ export default function Home() {
   return (
     <>
       <section className="hero">
-        <div className="hero__inner">
-          <h1>{SITE.tagline}</h1>
-          <p className="lead">{SITE.support}</p>
-        </div>
+        <h1 className="sr-only">{SITE.tagline}</h1>
         <div className="container">
           <Tool />
         </div>
